@@ -1,5 +1,21 @@
 # Getting Started
 
+## Ubuntu1404
+```bash
+$ sudo apt-get install -y python-dev python-pip git
+$ pip install https://github.com/renisac/turbo-telegram/archive/master.zip
+```
+
+## Client Examples
+
+```bash
+$ ri --members
+$ ri --members -q indiana university
+$ ri --domains
+$ ri --domains -q indiana.edu
+
+```
+
 # Getting Involved
 There are many ways to get involved with the project. If you have a new and exciting feature, or even a simple bugfix, simply [fork the repo](https://help.github.com/articles/fork-a-repo), create some simple test cases, [generate a pull-request](https://help.github.com/articles/using-pull-requests) and give yourself credit!
 

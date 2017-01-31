@@ -26,6 +26,7 @@ def main():
     p.add_argument('--token', help='specify api token [default %(default)s]', default=TOKEN)
     p.add_argument('--remote', help='specify API remote [default %(default)s]', default=REMOTE_ADDR)
     p.add_argument('--file', default='contacts.csv')
+    p.add_argument('--limit')
 
     args = p.parse_args()
 
@@ -55,6 +56,10 @@ def main():
                 count += 1
             else:
                 raise RuntimeError()
+
+            if args.limit and int(args.limit) == count:
+                print('limit reached..')
+                raise SystemExit
 
             if count % 100 == 0:
                 print('{} complete...'.format(count))

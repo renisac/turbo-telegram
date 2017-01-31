@@ -1,6 +1,6 @@
 COLUMNS = ['name', 'status', 'domains', 'prefixes', 'asns', 'created_at', 'updated_at']
 MAX_FIELD_SIZE = 30
 
-from ri_registry.format.table import Table
+from ri_registry.format import ztable
 
-FORMATS = {'table': Table}
+FORMATS = {'table': ztable}

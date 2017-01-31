@@ -2,8 +2,9 @@
 
 ## Ubuntu1404
 ```bash
+$ export RI_TOKEN=1234
 $ sudo apt-get install -y python-dev python-pip git
-$ pip install https://github.com/renisac/turbo-telegram/archive/master.zip
+$ pip install ri_registry
 ```
 
 ## Client Examples

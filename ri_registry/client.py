@@ -5,7 +5,7 @@ import json
 import textwrap
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from ri_registry.constants import VERSION, API_VERSION, TIMEOUT, REMOTE_ADDR, CONFIG_PATH, TOKEN, FORMAT
-from ri_registry.exceptions import AuthError, TimeoutError, InvalidSearch, MissingConfig
+from ri_registry.exceptions import AuthError, TimeoutError, InvalidSearch, MissingConfig, NotFound
 from ri_registry.utils import setup_logging, get_argument_parser, read_config
 from ri_registry.format import FORMATS
 
@@ -26,40 +26,53 @@ class Client(object):
 
         self.session = requests.Session()
         self.session.headers["Accept"] = 'application/vnd.r.renisac.v{}+json'.format(API_VERSION)
-        self.session.headers['User-Agent'] = 'ri_registry/{}'.format(VERSION)
+        self.session.headers['User-Agent'] = 'ri-registry/{}'.format(VERSION)
         self.session.headers['Authorization'] = 'Token token=' + self.token
         self.session.headers['Content-Type'] = 'application/json'
+
+    def _check_resp(self, resp, expects=200):
+        if isinstance(expects, int):
+            expects = [expects]
+
+        if resp.status_code in expects:
+            return True
+
+        if resp.status_code == 401:
+            raise AuthError()
+
+        if resp.status_code == 404:
+            raise NotFound()
+
+        raise RuntimeError(resp.text)
+
+    def _post(self, uri, data):
+        if not uri.startswith('http'):
+            uri = self.remote + uri
+
+        data = json.dumps(data)
+        resp = self.session.post(uri, data=data, verify=self.verify_ssl)
+        self._check_resp(resp, [200, 201])
+
+        return json.loads(resp.text)
 
     def _get(self, uri, params={}):
         if not uri.startswith('http'):
             uri = self.remote + uri
-        body = self.session.get(uri, params=params, verify=self.verify_ssl)
 
-        if body.status_code > 303:
-            err = 'request failed: %s' % str(body.status_code)
-            self.logger.debug(err)
+        resp = self.session.get(uri, params=params, verify=self.verify_ssl)
+        self._check_resp(resp, 200)
 
-            if body.status_code == 401:
-                raise AuthError('invalid token')
-            elif body.status_code == 404:
-                err = 'not found'
-                raise RuntimeError(err)
-            elif body.status_code == 408:
-                raise TimeoutError('timeout')
-            else:
-                try:
-                    err = json.loads(body.content).get('message')
-                    raise RuntimeError(err)
-                except ValueError as e:
-                    err = body.content
-                    self.logger.error(err)
-                    raise RuntimeError(err)
-
-        return json.loads(body.content)
+        return json.loads(resp.text)
 
     def members(self, filters={}):
         rv = self._get('/members', params=filters)
         return rv
+
+    def organizations(self, filters={}):
+        return self._get('/organizations', params=filters)
+
+    def prefixes(self, filters={}):
+        return self._get('/prefixes', params=filters)
 
     def domains(self, filters={}):
         rv = self._get('/domains', params=filters)
@@ -74,12 +87,17 @@ def main():
     p = get_argument_parser()
     p = ArgumentParser(
         description=textwrap.dedent('''\
+        Environmental Variables:
+            REN_TOKEN
+            REN_REMOTE_ADDR
+
         example usage:
-            $ ri --members
-            $ ri --members -q indiana university
-            $ ri --domains
-            $ ri --domains -q indiana.edu
-            $ ri --prefixes
+            $ REN_TOKEN=1234 ri --members
+            $ ren --members -q indiana university
+            $ ren --domains
+            $ ren --domains -q indiana.edu
+            $ ren --prefixes
+            $ ren --prefixes -q 129.79.78.188
         '''),
         formatter_class=RawDescriptionHelpFormatter,
         prog='ri',
@@ -92,38 +110,21 @@ def main():
     p.add_argument('--members', help='filter for members', action='store_true')
     p.add_argument('--domains', help='filter for domains', action='store_true')
     p.add_argument('--asns', help='filter for asns', action='store_true')
+    p.add_argument('--prefixes', help='filter for prefixes', action='store_true')
+
     p.add_argument('-q', help='filter results by q')
 
-    p.add_argument('-f', '--format', help='specify output format [default: %(default)s]', default=FORMAT,
+    p.add_argument('-f', '--format', help='specify output format [default: %(default)s]', default='raw',
                    choices=FORMATS.keys())
-
 
     args = p.parse_args()
 
     setup_logging(args)
-    logger = logging.getLogger(__name__)
 
-    o = {}
-    try:
-        o = read_config(args)
-    except MissingConfig:
-        pass
-
-    options = vars(args)
-    for v in options:
-        if v == 'remote' and options[v] == REMOTE_ADDR and o.get('remote'):
-            options[v] = o['remote']
-        if options[v] is None:
-            options[v] = o.get(v)
-
-    if not options.get('token'):
+    if not args.token:
         raise RuntimeError('missing --token')
 
-    verify_ssl = True
-    if o.get('no_verify_ssl') or options.get('no_verify_ssl'):
-        verify_ssl = False
-
-    cli = Client(args.remote, args.token, verify_ssl=verify_ssl)
+    cli = Client(args.remote, args.token)
 
     if args.members:
         search_handler = cli.members
@@ -134,18 +135,16 @@ def main():
     if args.asns:
         search_handler = cli.asns
 
-    try:
-        rv = search_handler(filters={'q': args.q})
-    except AuthError:
-        logger.error('unauthorized')
-    except InvalidSearch as e:
-        logger.error('invalid search')
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        logger.error(e)
+    if args.prefixes:
+        search_handler = cli.prefixes
+
+    rv = search_handler(filters={'q': args.q})
+
+    if args.format == 'raw':
+        pprint(rv)
     else:
-        print(FORMATS[options['format']](data=rv))
+        for l in FORMATS[args.format].get_lines(rv):
+            print(l)
 
 if __name__ == "__main__":
     main()

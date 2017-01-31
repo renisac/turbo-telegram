@@ -26,16 +26,17 @@ setup(
     author_email="wes@ren-isac.net",
     packages=find_packages(),
     install_requires=[
-        'prettytable>=0.7.2',
-        'pyaml>=15.03.1',
-        'requests>=2.6.0',
-        'arrow>=0.6.0',
-        'pytest>=2.9.2'
+        'prettytable',
+        'pyaml',
+        'requests',
+        'arrow',
+        'pytest'
     ],
     scripts=[],
     entry_points={
         'console_scripts': [
-            'ri=ri_registry.client:main',
+            'ren=ri_registry.client:main',
+            'ren-networks=ri_registry.networks:main'
         ]
     },
 )

@@ -8,17 +8,24 @@ class RIException(Exception):
 
 
 class AuthError(RIException):
-    pass
+    def __init__(self, msg):
+        self.msg = 'Unauthorized'
 
 
 class TimeoutError(RIException):
-    pass
+    def __init__(self, msg):
+        self.msg = 'Timeout'
 
 
 class InvalidSearch(RIException):
-    pass
+    def __init__(self, msg):
+        self.msg = 'Invalid Search'
 
 
 class MissingConfig(RIException):
     pass
 
+
+class NotFound(RIException):
+    def __init__(self, msg):
+        self.msg = 'Not Found'

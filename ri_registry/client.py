@@ -1,22 +1,30 @@
 import logging
 import requests
-import time
 import json
 import textwrap
+import os
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from ri_registry.constants import VERSION, API_VERSION, TIMEOUT, REMOTE_ADDR, CONFIG_PATH, TOKEN, FORMAT
-from ri_registry.exceptions import AuthError, TimeoutError, InvalidSearch, MissingConfig, NotFound
-from ri_registry.utils import setup_logging, get_argument_parser, read_config
-from ri_registry.format import FORMATS
-
+from ri_registry.constants import VERSION, API_VERSION, TIMEOUT, REMOTE_ADDR, TOKEN
+from ri_registry.exceptions import AuthError, NotFound
+from ri_registry.utils import setup_logging, get_argument_parser
+from ri_registry.format import FORMATS, COLUMNS
 from pprint import pprint
+
+TRACE = os.getenv('RI_TRACE', False)
+
+logger = logging.getLogger(__name__)
+
+logger.setLevel(logging.WARNING)
+logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.ERROR)
+
+if TRACE:
+    logger.setLevel(logging.DEBUG)
+    logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.DEBUG)
 
 
 class Client(object):
 
     def __init__(self, remote, token, proxy=None, timeout=TIMEOUT, verify_ssl=True, **kwargs):
-
-        self.logger = logging.getLogger(__name__)
         self.remote = remote
         self.token = str(token)
 
@@ -29,31 +37,23 @@ class Client(object):
         self.session.headers['User-Agent'] = 'ri-registry/{}'.format(VERSION)
         self.session.headers['Authorization'] = 'Token token=' + self.token
         self.session.headers['Content-Type'] = 'application/json'
+        self.session.headers['Accept-Encoding'] = 'deflate'
 
     def _check_resp(self, resp, expects=200):
+
         if isinstance(expects, int):
             expects = [expects]
 
         if resp.status_code in expects:
             return True
 
-        if resp.status_code == 401:
-            raise AuthError()
+        if resp.status_code in [401, 403]:
+            raise AuthError(resp.text)
 
         if resp.status_code == 404:
-            raise NotFound()
+            raise NotFound(resp.text)
 
         raise RuntimeError(resp.text)
-
-    def _post(self, uri, data):
-        if not uri.startswith('http'):
-            uri = self.remote + uri
-
-        data = json.dumps(data)
-        resp = self.session.post(uri, data=data, verify=self.verify_ssl)
-        self._check_resp(resp, [200, 201])
-
-        return json.loads(resp.text)
 
     def _get(self, uri, params={}):
         if not uri.startswith('http'):
@@ -65,22 +65,10 @@ class Client(object):
         return json.loads(resp.text)
 
     def members(self, filters={}):
-        rv = self._get('/members', params=filters)
-        return rv
+        return self._get('/members', params=filters)
 
-    def organizations(self, filters={}):
-        return self._get('/organizations', params=filters)
-
-    def prefixes(self, filters={}):
-        return self._get('/prefixes', params=filters)
-
-    def domains(self, filters={}):
-        rv = self._get('/domains', params=filters)
-        return rv
-
-    def asns(self, filters={}):
-        rv = self._get('asns', params=filters)
-        return rv
+    def users(self, filters={}):
+        return self._get('/users', params=filters)
 
 
 def main():
@@ -89,32 +77,23 @@ def main():
         description=textwrap.dedent('''\
         Environmental Variables:
             REN_TOKEN
-            REN_REMOTE_ADDR
 
         example usage:
             $ REN_TOKEN=1234 ri --members
-            $ ren --members -q indiana university
-            $ ren --domains
-            $ ren --domains -q indiana.edu
-            $ ren --prefixes
-            $ ren --prefixes -q 129.79.78.188
+            $ ren --members 'indiana university'
+            $ ren --users wes
         '''),
         formatter_class=RawDescriptionHelpFormatter,
         prog='ri',
         parents=[p]
     )
-    p.add_argument('--config', help='specify config file [default %(default)s]', default=CONFIG_PATH)
-    p.add_argument('--token', help='specify api token [default %(default)s]', default=TOKEN)
+    p.add_argument('--token', help='specify api token]', default=TOKEN)
     p.add_argument('--remote', help='specify API remote [default %(default)s]', default=REMOTE_ADDR)
 
-    p.add_argument('--members', help='filter for members', action='store_true')
-    p.add_argument('--domains', help='filter for domains', action='store_true')
-    p.add_argument('--asns', help='filter for asns', action='store_true')
-    p.add_argument('--prefixes', help='filter for prefixes', action='store_true')
+    p.add_argument('--members', help='filter for members')
+    p.add_argument('--users', help='filter for users')
 
-    p.add_argument('-q', help='filter results by q')
-
-    p.add_argument('-f', '--format', help='specify output format [default: %(default)s]', default='raw',
+    p.add_argument('-f', '--format', help='specify output format [default: %(default)s]', default='table',
                    choices=FORMATS.keys())
 
     args = p.parse_args()
@@ -126,25 +105,25 @@ def main():
 
     cli = Client(args.remote, args.token)
 
+    cols = COLUMNS
+
     if args.members:
-        search_handler = cli.members
+        rv = cli.members(filters={'q': args.members})
 
-    if args.domains:
-        search_handler = cli.domains
+    elif args.users:
+        cols = ['username', 'created_at', 'updated_at']
+        rv = cli.users(filters={'q': args.users})
 
-    if args.asns:
-        search_handler = cli.asns
-
-    if args.prefixes:
-        search_handler = cli.prefixes
-
-    rv = search_handler(filters={'q': args.q})
+    else:
+        print("Missing --users or --members flag")
+        raise SystemExit
 
     if args.format == 'raw':
         pprint(rv)
     else:
-        for l in FORMATS[args.format].get_lines(rv):
+        for l in FORMATS[args.format].get_lines(rv, cols):
             print(l)
+
 
 if __name__ == "__main__":
     main()

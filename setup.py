@@ -13,12 +13,11 @@ setup(
     description="Registry SDK",
     long_description="Software Development Kit for the REN-ISAC Registry",
     url="https://github.com/renisac/turbo-telegram",
-    license='LGPL3',
+    license='MPLv2',
     classifiers=[
                "Topic :: System :: Networking",
                "Environment :: Other Environment",
                "Intended Audience :: Developers",
-               "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
                "Programming Language :: Python",
                ],
     keywords=['security'],
@@ -36,7 +35,6 @@ setup(
     entry_points={
         'console_scripts': [
             'ren=ri_registry.client:main',
-            'ren-networks=ri_registry.networks:main'
         ]
     },
 )

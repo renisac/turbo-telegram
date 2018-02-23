@@ -2,7 +2,7 @@
 
 ## Ubuntu1404
 ```bash
-$ export RI_TOKEN=1234
+$ export REN_TOKEN=1234
 $ sudo apt-get install -y python-dev python-pip git
 $ pip install ri_registry
 ```

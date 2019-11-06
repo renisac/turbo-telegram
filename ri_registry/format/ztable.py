@@ -25,7 +25,7 @@ def get_lines(data, cols=COLUMNS, max_field_size=MAX_FIELD_SIZE):
                 pass
 
             if y and (c in ['created_at', 'updated_at']):
-                y = arrow.get(y).format('YYYY-MM-DDTHH:mm:ss')
+                y = arrow.get(y, 'YYYY-MM-DD HH:mm:ss')
                 y = '{}Z'.format(y)
             else:
                 y = str(y)

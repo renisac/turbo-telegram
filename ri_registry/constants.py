@@ -12,8 +12,7 @@ LOG_FORMAT = '%(asctime)s - %(levelname)s - %(name)s[%(lineno)s][%(threadName)s]
 LOGLEVEL = 'ERROR'
 LOGLEVEL = os.getenv('RI_LOGLEVEL', LOGLEVEL).upper()
 
-REMOTE_ADDR = 'https://r.ren-isac.net/api'
-REMOTE_ADDR = os.getenv('REN_REMOTE_ADDR', REMOTE_ADDR)
+REMOTE_ADDR = os.getenv('REN_REMOTE', 'https://r.ren-isac.net') + "/api"
 
 TOKEN = os.getenv('REN_TOKEN', None)
 FORMAT = os.getenv('REN_FORMAT', 'table')

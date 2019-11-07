@@ -1,20 +1,23 @@
 # Getting Started
+Required Environment variables:
+REN_TOKEN = `token`
+
+Optional Environment Variables, used for testing non-production as r.ren is hardcoded:
+REN_REMOTE=https://test-env.domain.com
+REN_VERIFY_SSL=False
 
 ## Ubuntu1404
 ```bash
 $ export REN_TOKEN=1234
-$ sudo apt-get install -y python-dev python-pip git
-$ pip install ri_registry
+$ git clone https://github.com/renisac/turbo-telegram.git
+$ pip install -e turbo-telegram
 ```
 
 ## Client Examples
 
 ```bash
-$ ri --members
-$ ri --members -q indiana university
-$ ri --domains
-$ ri --domains -q indiana.edu
-
+$ ren --users sfinlon
+$ ren --members 'Indiana University'
 ```
 
 # Getting Involved

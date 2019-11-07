@@ -11,6 +11,9 @@ from ri_registry.format import FORMATS, COLUMNS
 from pprint import pprint
 
 TRACE = os.getenv('RI_TRACE', False)
+SSL = os.getenv('REN_VERIFY_SSL', True)
+if SSL == 'False':
+    SSL = False
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,7 @@ if TRACE:
 
 class Client(object):
 
-    def __init__(self, remote, token, proxy=None, timeout=TIMEOUT, verify_ssl=True, **kwargs):
+    def __init__(self, remote, token, proxy=None, timeout=TIMEOUT, verify_ssl=SSL, **kwargs):
         self.remote = remote
         self.token = str(token)
 

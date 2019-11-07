@@ -1,9 +1,12 @@
 # Getting Started
 Required Environment variables:
+
 REN_TOKEN = `token`
 
 Optional Environment Variables, used for testing non-production as r.ren is hardcoded:
+
 REN_REMOTE=https://test-env.domain.com
+
 REN_VERIFY_SSL=False
 
 ## Ubuntu1404
